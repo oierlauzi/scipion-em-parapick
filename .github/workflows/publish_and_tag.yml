@@ -1,0 +1,13 @@
+# Publish master to PyPI and tag the release
+name: master to pypi with comments and tag
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  call-publish-workflow:
+    uses: scipion-em/.github/.github/workflows/publish_and_tag_toml.yml@master
+    with:
+      folder: parapick
+    secrets: inherit

@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scipion-em-parapick"
+dynamic = ["version", "dependencies"]
+description = "Scipion plugin for ParaPick: tomogram-free 3D particle localization from 2D picks on tilt-series"
+authors = [
+    {name = "Oier Lauzirika Zarrabeitia", email = "olauzirika@cnb.csic.es"},
+]
+requires-python = ">=3.8"
+readme = "README.rst"
+license = {text = "GNU General Public License v3 (GPLv3)"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["scipion", "cryoem", "cryoet", "tomography", "particle picking", "scipion-3.0"]
+
+[project.urls]
+Homepage = "https://github.com/scipion-em/scipion-em-parapick"
+Issues = "https://github.com/scipion-em/scipion-em-parapick/issues"
+
+[tool.setuptools.dynamic]
+version = {attr = "parapick.__version__"}
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+include = ["parapick*"]
+
+[tool.setuptools.package-data]
+"parapick" = ["protocols.conf"]
+
+[project.entry-points."pyworkflow.plugin"]
+parapick = "parapick"
