@@ -111,8 +111,9 @@ class ParapickProtMatchTemplate(EMProtocol):
         form.addParam('particleDiameter', params.FloatParam, default=None,
                       important=True,
                       label='Particle diameter (Å)',
-                      help='Diameter of the target. Sets the high-pass, the angular steps '
-                           'and the minimum distance between peaks.')
+                      help='Diameter of the target. Sets the high-pass and the angular steps. '
+                           'Peaks may be closer than it, since particles overlap in projection: '
+                           'their minimum distance is one resolution element of each tilt.')
         form.addParam('thickness', params.FloatParam, default=2000.0,
                       label='Sample thickness (Å)',
                       validators=[params.Positive],
