@@ -33,15 +33,16 @@ note = {Software available at https://github.com/oierlauzi/parapick},
 url = {https://github.com/oierlauzi/parapick}
 }
 
-@article{Giammar2025,
-author = {Giammar, Matthew David and Dickerson, Joshua Luke and Hall, Laina Nicole and Lucas, Bronwyn Ayla},
-title = {Leopard-EM: An extensible 2DTM package to accelerate in situ structural biology},
-elocation-id = {2025.08.26.672452},
-year = {2025},
-doi = {10.1101/2025.08.26.672452},
-publisher = {Cold Spring Harbor Laboratory},
-url = {https://www.biorxiv.org/content/early/2025/08/29/2025.08.26.672452},
-journal = {bioRxiv}
+@article{Giammar2026,
+author = {Giammar, Matthew D. and Dickerson, Joshua L. and Hall, Laina N. and Lucas, Bronwyn A.},
+title = {{Leopard-EM}: an extensible {2D} template-matching package to accelerate in situ structural biology},
+journal = {Acta Crystallographica Section D: Structural Biology},
+volume = {82},
+number = {1},
+pages = {30--42},
+year = {2026},
+doi = {10.1107/S2059798325009982},
+url = {https://doi.org/10.1107/S2059798325009982}
 }
 
 @article{Grant2015,

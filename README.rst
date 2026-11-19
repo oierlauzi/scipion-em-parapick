@@ -36,7 +36,11 @@ which go straight into localize. The parameters of each tilt (low-pass, angular 
 steps, defocus range) are derived by ParaPick from its dose, its CTF and the tilt of the
 sample; the thickness comes from the tomograms if given. "Tilts per tilt-series" searches
 only those with the highest predicted SNR. It needs the optional binary
-``parapick-leopard-<version>`` (see Installation).
+``parapick-leopard-<version>`` (see Installation). The template matching is done by
+`Leopard-EM <https://github.com/Lucaslab-Berkeley/Leopard-EM>`_ (Lucas lab, UC Berkeley);
+please cite it when you use this protocol: Giammar MD, Dickerson JL, Hall LN, Lucas BA
+(2026). Leopard-EM: an extensible 2D template-matching package to accelerate in situ
+structural biology. *Acta Cryst. D* 82, 30–42. https://doi.org/10.1107/S2059798325009982
 
 The **particle diameter** is required: half of it is the initial spread of the model.
 It must be smaller than the distance between neighbouring particles; ParaPick's own

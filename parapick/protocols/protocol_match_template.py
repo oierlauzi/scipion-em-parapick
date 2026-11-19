@@ -66,10 +66,14 @@ class ParapickProtMatchTemplate(EMProtocol):
     Outputs the tilt images as micrographs and the peaks found on them as coordinates,
     scored by their z-score, ready for "parapick - localize".
 
+    The template matching is done by Leopard-EM (Lucas lab, UC Berkeley): please cite
+    Giammar et al. (2026), Acta Cryst. D 82, 30-42, https://doi.org/10.1107/S2059798325009982.
+    ParaPick only derives its parameters.
+
     Needs the optional binary: scipion3 installb parapick-leopard-<version>.
     """
     _label = 'template matching (Leopard-EM)'
-    _references = ['Giammar2025', 'Grant2015']
+    _references = ['Giammar2026', 'Grant2015', 'deIsidroGomez2026parapick']
     _devStatus = BETA
     _possibleOutputs = ParapickMatchTemplateOutputs
     stepsExecutionMode = STEPS_PARALLEL
@@ -407,6 +411,6 @@ class ParapickProtMatchTemplate(EMProtocol):
         if coords is None:
             return []
         return ['%d particles were found on the tilt images by 2D template matching with '
-                'Leopard-EM [Giammar2025], with parameters derived for each tilt image from its '
+                'Leopard-EM [Giammar2026], with parameters derived for each tilt image from its '
                 'dose [Grant2015] and geometry by ParaPick [deIsidroGomez2026parapick].'
                 % coords.getSize()]
