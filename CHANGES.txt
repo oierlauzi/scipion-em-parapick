@@ -1,5 +1,9 @@
 0.1.0 (unreleased):
     - First version.
+    - Protocol "template matching (Leopard-EM)": SetOfTiltSeries + SetOfCTFTomoSeries + template -> SetOfMicrographs
+      (the tilt images) and SetOfCoordinates scored by z-score, ready for "localize". Runs "parapick match-template",
+      with the parameters of each tilt derived from its dose and geometry. Needs the optional binary parapick-leopard.
+      Leopard-EM (Giammar et al., 2026, Acta Cryst. D) is cited in the protocol's references and methods.
     - Protocol "unstack tilt-series": SetOfTiltSeries -> SetOfMicrographs (one micrograph per tilt image) for SPA pickers.
       The output is a plain SetOfMicrographs of Micrograph items, which Xmipp's picker and viewer require; the tilt
       identity is kept in extra attributes. Outputs of the former SetOfTiltSeriesMicrographs class still load.

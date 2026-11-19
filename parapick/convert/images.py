@@ -55,6 +55,16 @@ def readSection(fileName, index):
     return np.asarray(ImageHandler().read((index, fileName)).getData(), dtype=np.float32)
 
 
+def readVolume(fileName):
+    """ Read a 3D volume as float32. """
+    fileName = _stripType(fileName)
+    if fileName.lower().endswith(MRC_EXTENSIONS):
+        with mrcfile.mmap(fileName, mode='r', permissive=True) as mrc:
+            return np.array(mrc.data, dtype=np.float32)
+    from pwem.emlib.image import ImageHandler  # Other formats
+    return np.asarray(ImageHandler().read(fileName).getData(), dtype=np.float32)
+
+
 def binnedShape(shape, binning):
     """ ``(H, W)`` after binning by an integer factor (trailing pixels are dropped). """
     return tuple(max(1, n // int(binning)) for n in shape)
@@ -92,7 +102,7 @@ def fourierCrop(image, shape):
 
 
 def writeMrc(fileName, image, pixelSize):
-    """ Write a 2D float32 MRC with the given pixel size (Å/px). """
+    """ Write a 2D (or 3D) float32 MRC with the given pixel size (Å/px). """
     os.makedirs(os.path.dirname(os.path.abspath(fileName)), exist_ok=True)
     tmp = fileName + '.tmp'
     with mrcfile.new(tmp, overwrite=True) as mrc:

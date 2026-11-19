@@ -32,4 +32,26 @@ year = {2026},
 note = {Software available at https://github.com/oierlauzi/parapick},
 url = {https://github.com/oierlauzi/parapick}
 }
+
+@article{Giammar2026,
+author = {Giammar, Matthew D. and Dickerson, Joshua L. and Hall, Laina N. and Lucas, Bronwyn A.},
+title = {{Leopard-EM}: an extensible {2D} template-matching package to accelerate in situ structural biology},
+journal = {Acta Crystallographica Section D: Structural Biology},
+volume = {82},
+number = {1},
+pages = {30--42},
+year = {2026},
+doi = {10.1107/S2059798325009982},
+url = {https://doi.org/10.1107/S2059798325009982}
+}
+
+@article{Grant2015,
+author = {Grant, Timothy and Grigorieff, Nikolaus},
+title = {Measuring the optimal exposure for single particle cryo-EM using a 2.6 {\AA} reconstruction of rotavirus VP6},
+journal = {eLife},
+volume = {4},
+pages = {e06980},
+year = {2015},
+doi = {10.7554/eLife.06980}
+}
 """

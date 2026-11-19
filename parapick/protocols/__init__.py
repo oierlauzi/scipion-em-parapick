@@ -25,3 +25,4 @@
 # **************************************************************************
 from .protocol_unstack import ParapickProtUnstack, ParapickUnstackOutputs
 from .protocol_localize import ParapickProtLocalize, ParapickLocalizeOutputs
+from .protocol_match_template import ParapickProtMatchTemplate, ParapickMatchTemplateOutputs
