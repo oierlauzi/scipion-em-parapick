@@ -35,7 +35,10 @@ images, as from unstack) and ``SetOfCoordinates`` (the peaks, scored by their z-
 which go straight into localize. The parameters of each tilt (low-pass, angular and defocus
 steps, defocus range) are derived by ParaPick from its dose, its CTF and the tilt of the
 sample; the thickness comes from the tomograms if given. "Tilts per tilt-series" searches
-only those with the highest predicted SNR. It needs the optional binary
+only those with the highest predicted SNR. For speed, "Binning factor" searches binned tilt
+images and "Sampling: fast" keeps the steps proportional to the resolution of each tilt
+(for locations rather than poses); binning by 4 with fast sampling is two orders of
+magnitude cheaper than the defaults. It needs the optional binary
 ``parapick-leopard-<version>`` (see Installation). The template matching is done by
 `Leopard-EM <https://github.com/Lucaslab-Berkeley/Leopard-EM>`_ (Lucas lab, UC Berkeley);
 please cite it when you use this protocol: Giammar MD, Dickerson JL, Hall LN, Lucas BA

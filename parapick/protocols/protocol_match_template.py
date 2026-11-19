@@ -49,6 +49,7 @@ from ..objects import TiltCtfLookup, setTiltImageInfo, setTiltSeriesPointer
 logger = logging.getLogger(__name__)
 
 PIXEL_SIZE_TOLERANCE = 0.01
+SAMPLING_CHOICES = ['default', 'fast']
 
 
 class ParapickMatchTemplateOutputs(Enum):
@@ -126,6 +127,20 @@ class ParapickProtMatchTemplate(EMProtocol):
                            'ranking of the tilts.')
 
         form.addSection(label='Search')
+        form.addParam('binning', params.IntParam, default=1,
+                      label='Binning factor',
+                      validators=[params.GE(1)],
+                      help='Search the tilt images binned by this factor (Fourier cropping): '
+                           'about N² faster per orientation, and the coarser pixel allows '
+                           'coarser steps. The coordinates stay in the pixels of the '
+                           'tilt-series. The template may be at the pixel size of the '
+                           'tilt-series or of the binned images.')
+        form.addParam('sampling', params.EnumParam, choices=SAMPLING_CHOICES, default=0,
+                      label='Sampling',
+                      help='default: angular steps capped at 4°/3° and defocus step at '
+                           '500 Å. fast: steps proportional to the resolution left in each '
+                           'tilt (the relative accuracy of Leopard-EM\'s defaults), uncapped. '
+                           'Much faster on binned or late tilts; for locations, not poses.')
         form.addParam('maxTilts', params.IntParam, default=-1,
                       label='Tilts per tilt-series',
                       help='Search only this many tilt images of each tilt-series, those with '
@@ -135,7 +150,8 @@ class ParapickProtMatchTemplate(EMProtocol):
                       label='False positives per image',
                       validators=[params.Positive],
                       help='Expected false positives per tilt image: sets the threshold of '
-                           'the peaks.')
+                           'the peaks. Localize tolerates false positives on single tilts, so '
+                           'a value well above 1 keeps more true particles.')
         form.addParam('orientationBatchSize', params.IntParam, default=16,
                       expertLevel=params.LEVEL_ADVANCED,
                       label='Orientation batch size',
@@ -311,7 +327,9 @@ class ParapickProtMatchTemplate(EMProtocol):
                 '--particle-diameter', self.particleDiameter.get(),
                 '--symmetry', self.symmetry.get(),
                 '--false-positives', self.falsePositives.get(),
-                '--orientation-batch-size', self.orientationBatchSize.get()]
+                '--orientation-batch-size', self.orientationBatchSize.get(),
+                '--binning', self.binning.get(),
+                '--sampling', SAMPLING_CHOICES[self.sampling.get()]]
         if manifest.get('dosePerTilt'):
             args += ['--dose-per-tilt', manifest['dosePerTilt']]
         if self.maxTilts.get() > 0:
@@ -383,10 +401,11 @@ class ParapickProtMatchTemplate(EMProtocol):
         template = self.inputTemplate.get()
         if tsSet is not None and template is not None:
             tsSr, tmplSr = tsSet.getSamplingRate(), template.getSamplingRate()
-            if abs(tsSr - tmplSr) > PIXEL_SIZE_TOLERANCE * tsSr:
-                errors.append('The template has %.4f Å/px but the tilt-series %.4f Å/px. '
-                              'Rescale or simulate the template at the pixel size of the '
-                              'tilt-series.' % (tmplSr, tsSr))
+            allowed = {tsSr, tsSr * self.binning.get()}
+            if all(abs(sr - tmplSr) > PIXEL_SIZE_TOLERANCE * sr for sr in allowed):
+                errors.append('The template has %.4f Å/px but the tilt-series %.4f Å/px '
+                              '(%.4f Å/px binned). Rescale or simulate the template at one of '
+                              'them.' % (tmplSr, tsSr, tsSr * self.binning.get()))
         return errors
 
     def _warnings(self):
