@@ -32,4 +32,25 @@ year = {2026},
 note = {Software available at https://github.com/oierlauzi/parapick},
 url = {https://github.com/oierlauzi/parapick}
 }
+
+@article{Giammar2025,
+author = {Giammar, Matthew David and Dickerson, Joshua Luke and Hall, Laina Nicole and Lucas, Bronwyn Ayla},
+title = {Leopard-EM: An extensible 2DTM package to accelerate in situ structural biology},
+elocation-id = {2025.08.26.672452},
+year = {2025},
+doi = {10.1101/2025.08.26.672452},
+publisher = {Cold Spring Harbor Laboratory},
+url = {https://www.biorxiv.org/content/early/2025/08/29/2025.08.26.672452},
+journal = {bioRxiv}
+}
+
+@article{Grant2015,
+author = {Grant, Timothy and Grigorieff, Nikolaus},
+title = {Measuring the optimal exposure for single particle cryo-EM using a 2.6 {\AA} reconstruction of rotavirus VP6},
+journal = {eLife},
+volume = {4},
+pages = {e06980},
+year = {2015},
+doi = {10.7554/eLife.06980}
+}
 """

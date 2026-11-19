@@ -28,6 +28,16 @@ Workflow
      one per tilt image), in the raw tilt-image frame, with residuals;
    - ``SetOfCoordinates3D`` on the tomograms, if given.
 
+Instead of an SPA picker (steps 1 and 2), **parapick - template matching (Leopard-EM)**
+picks every tilt image by 2D template matching: ``SetOfTiltSeries`` + ``SetOfCTFTomoSeries``
++ template ``Volume`` (at the pixel size of the tilt-series) → ``SetOfMicrographs`` (the tilt
+images, as from unstack) and ``SetOfCoordinates`` (the peaks, scored by their z-score),
+which go straight into localize. The parameters of each tilt (low-pass, angular and defocus
+steps, defocus range) are derived by ParaPick from its dose, its CTF and the tilt of the
+sample; the thickness comes from the tomograms if given. "Tilts per tilt-series" searches
+only those with the highest predicted SNR. It needs the optional binary
+``parapick-leopard-<version>`` (see Installation).
+
 The **particle diameter** is required: half of it is the initial spread of the model.
 It must be smaller than the distance between neighbouring particles; ParaPick's own
 default (5% of the volume size) merges neighbours in crowded samples. The STAR files
@@ -51,6 +61,7 @@ Installation
 
     scipion3 installp -p scipion-em-parapick      # or, from a clone:  -p . --devel
     scipion3 installb parapick-0.2.0
+    scipion3 installb parapick-leopard-0.2.0   # optional: Leopard-EM, for template matching
 
 ParaPick is installed with pip in its own conda environment (``parapick-<version>``).
 Variables (Scipion config or environment):

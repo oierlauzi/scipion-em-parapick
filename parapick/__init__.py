@@ -38,9 +38,10 @@ import pwem
 import pyworkflow.utils as pwutils
 from pyworkflow import TOMO
 
-from .constants import (PARAPICK, VERSIONS, DEFAULT_VERSION, PARAPICK_ENV_ACTIVATION,
-                        PARAPICK_SOURCE, PARAPICK_JAX_EXTRA, DEFAULT_ACTIVATION_CMD,
-                        PYTHON_VERSION, getEnvName)
+from .constants import (PARAPICK, PARAPICK_LEOPARD, LEOPARD_EXTRA, VERSIONS, DEFAULT_VERSION,
+                        PARAPICK_ENV_ACTIVATION, PARAPICK_SOURCE, PARAPICK_JAX_EXTRA,
+                        DEFAULT_ACTIVATION_CMD, PYTHON_VERSION, getEnvName,
+                        getLeopardMarker)
 
 __version__ = '0.1.0'
 _references = ['deIsidroGomez2026parapick']
@@ -73,6 +74,7 @@ class Plugin(pwem.Plugin):
     def defineBinaries(cls, env):
         for version in cls._supportedVersions:
             cls._addParapickPackage(env, version, default=(version == DEFAULT_VERSION))
+            cls._addLeopardPackage(env, version)
 
     @classmethod
     def _getJaxExtra(cls):
@@ -84,10 +86,10 @@ class Plugin(pwem.Plugin):
         return 'cuda12' if shutil.which('nvidia-smi') else None
 
     @classmethod
-    def _getRequirement(cls, version):
-        extra = cls._getJaxExtra()
+    def _getRequirement(cls, version, extras=()):
+        extras = [e for e in [cls._getJaxExtra()] + list(extras) if e]
         source = (cls.getVar(PARAPICK_SOURCE) or '').strip()
-        suffix = '[%s]' % extra if extra else ''
+        suffix = '[%s]' % ','.join(extras) if extras else ''
         if not source:
             return shlex.quote('parapick%s==%s' % (suffix, version))
         if os.path.isdir(source):  # Local clone: editable install for development
@@ -112,6 +114,33 @@ class Plugin(pwem.Plugin):
                        neededProgs=cls.getDependencies(),
                        vars={'PATH': envPath} if envPath else None,
                        default=default)
+
+    @classmethod
+    def _addLeopardPackage(cls, env, version):
+        """ Optional (``scipion3 installb parapick-leopard-<version>``): installs ParaPick's
+        ``leopard`` extra, i.e. Leopard-EM and PyTorch, into the ParaPick environment, for
+        "parapick - template matching". """
+        installed = getLeopardMarker(version)
+        cmd = ' '.join([
+            cls.getCondaActivationCmd(),
+            'conda activate %s &&' % getEnvName(version),
+            'python -m pip install %s &&' % cls._getRequirement(version, [LEOPARD_EXTRA]),
+            'parapick match-template --help > /dev/null &&',
+            'touch %s' % installed,
+        ])
+        envPath = os.environ.get('PATH', '')
+        env.addPackage(PARAPICK_LEOPARD, version=version, tar='void.tgz',
+                       commands=[(cmd, installed)],
+                       neededProgs=cls.getDependencies(),
+                       vars={'PATH': envPath} if envPath else None,
+                       default=False)
+
+    @classmethod
+    def isLeopardInstalled(cls):
+        """ Whether the parapick-leopard binary of the active version was installed. """
+        version = cls.getActiveVersion() or DEFAULT_VERSION
+        folder = os.path.join(pwem.Config.EM_ROOT, '%s-%s' % (PARAPICK_LEOPARD, version))
+        return os.path.exists(os.path.join(folder, getLeopardMarker(version)))
 
     @classmethod
     def getActivationCmd(cls):

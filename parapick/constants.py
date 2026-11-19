@@ -25,6 +25,9 @@
 # **************************************************************************
 
 PARAPICK = 'parapick'
+PARAPICK_LEOPARD = 'parapick-leopard'
+"""Optional binary: adds Leopard-EM (2D template matching) to the ParaPick environment."""
+LEOPARD_EXTRA = 'leopard'
 
 # Supported versions of the ParaPick package (PyPI: parapick)
 V0_2_0 = '0.2.0'
@@ -44,6 +47,11 @@ PYTHON_VERSION = '3.12'
 
 def getEnvName(version):
     return '%s-%s' % (PARAPICK, version)
+
+
+def getLeopardMarker(version):
+    """ File (in the parapick-leopard package folder) that marks it as installed. """
+    return 'parapick_leopard_%s_installed' % version
 
 
 DEFAULT_ACTIVATION_CMD = 'conda activate %s' % getEnvName(DEFAULT_VERSION)

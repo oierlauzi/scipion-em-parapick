@@ -40,7 +40,8 @@ TiltSeriesGeometry = namedtuple('TiltSeriesGeometry', [
     'volumeSize',   # (X, Y, Z) of the volume to localize in, pixels (even)
     'tilts',        # list of (tiltId, geometry.RelionTilt)
     'voltage', 'sphericalAberration', 'amplitudeContrast',
-])
+    'tiltColumns',  # optional {label: [value per tilt]}, e.g. CTF and pre-exposure
+], defaults=(None,))
 
 Pick = namedtuple('Pick', ['tsId', 'tiltId', 'x', 'y', 'score'])
 """ A 2D pick in pixels of the picked image (x = column, y = row, from the first pixel). """
@@ -75,12 +76,17 @@ def writeTomogramsStar(path, geometries):
     rows = []
     for geo in geometries:
         tsStar = os.path.join(TILT_SERIES_DIR, '%s.star' % geo.tsId)
+        extra = geo.tiltColumns or {}
+        for label, values in extra.items():
+            if len(values) != len(geo.tilts):
+                raise ValueError('%s: %s needs one value per tilt' % (geo.tsId, label))
         with open(os.path.join(root, tsStar), 'w') as f:
             _writeLoop(f, geo.tsId,
                        ['rlnMicrographName', 'rlnTomoXTilt', 'rlnTomoYTilt', 'rlnTomoZRot',
-                        'rlnTomoXShiftAngst', 'rlnTomoYShiftAngst'],
+                        'rlnTomoXShiftAngst', 'rlnTomoYShiftAngst'] + list(extra),
                        [(tiltId, t.xTilt, t.yTilt, t.zRot, t.xShiftAngst, t.yShiftAngst)
-                        for tiltId, t in geo.tilts])
+                        + tuple(values[i] for values in extra.values())
+                        for i, (tiltId, t) in enumerate(geo.tilts)])
         rows.append((geo.tsId, tsStar, float(geo.pixelSize),
                      int(geo.volumeSize[0]), int(geo.volumeSize[1]), int(geo.volumeSize[2]),
                      int(geo.imageSize[0]), int(geo.imageSize[1]),

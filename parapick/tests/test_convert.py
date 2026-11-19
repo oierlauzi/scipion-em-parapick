@@ -145,6 +145,33 @@ class TestStar(unittest.TestCase):
             self.assertNotIn('rlnAutopickFigureOfMerit', picks[0])
             self.assertEqual(picks[1]['rlnMicrographPixelSize'], '2.700000')
 
+    def test_tilt_columns(self):
+        """ Per-tilt metadata (CTF, dose) is written next to the geometry. """
+        with tempfile.TemporaryDirectory() as tmp:
+            tilts = [('a', geometry.RelionTilt(0.0, -3.0, 85.0, 0.0, 0.0)),
+                     ('b', geometry.RelionTilt(0.0, 3.0, 85.0, 0.0, 0.0))]
+            geo = star.TiltSeriesGeometry('TS', 1.0, (10, 10), (10, 10, 4), tilts,
+                                          300.0, 2.7, 0.1,
+                                          {'rlnDefocusU': [1.5e4, 1.6e4],
+                                           'rlnMicrographPreExposure': [3.0, 0.0]})
+            fn = os.path.join(tmp, 'tomograms.star')
+            star.writeTomogramsStar(fn, [geo])
+            rows = star.readStarTable(os.path.join(tmp, 'tilt_series', 'TS.star'), 'TS')
+            self.assertEqual([float(r['rlnDefocusU']) for r in rows], [1.5e4, 1.6e4])
+            self.assertEqual(rows[1]['rlnMicrographPreExposure'], '0.000000')
+            bad = geo._replace(tiltColumns={'rlnDefocusU': [1.0]})
+            with self.assertRaises(ValueError):
+                star.writeTomogramsStar(fn, [bad])
+
+    def test_picks_of_unstacked_tilts(self):
+        """ ParaPick names tilts by their row in the geometry: map back to the index. """
+        from parapick.protocols.protocol_match_template import ParapickProtMatchTemplate
+        manifest = {'TS_1': [1, 2, 4, 5]}  # tilt 3 disabled
+        pick = {'rlnTomoName': 'TS_1', 'rlnMicrographName': 'out/micrographs/TS_1_003.mrc'}
+        self.assertEqual(ParapickProtMatchTemplate._tiltIndexOfPick(pick, manifest), 4)
+        pick['rlnMicrographName'] = 'out/micrographs/TS_1_009.mrc'
+        self.assertIsNone(ParapickProtMatchTemplate._tiltIndexOfPick(pick, manifest))
+
     def test_read_parapick_outputs(self):
         """ Files as written by ParaPick (starfile). """
         with tempfile.TemporaryDirectory() as tmp:
