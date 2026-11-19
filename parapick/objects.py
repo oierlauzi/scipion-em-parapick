@@ -35,6 +35,9 @@ attributes, which Scipion saves and loads like any other:
   tilt angle of its source tilt image (:func:`setTiltImageInfo`);
 * on the set, a pointer to the source ``SetOfTiltSeries`` (:func:`setTiltSeriesPointer`).
 
+:class:`TiltCtfLookup` turns the per-tilt CTFs of a ``SetOfCTFTomoSeries`` into the
+single-particle ``CTFModel`` of each micrograph.
+
 :class:`TiltSeriesMicrograph` and :class:`SetOfTiltSeriesMicrographs` carry the same
 attributes under the same names. They are kept only so that projects made by earlier
 versions still load. New outputs do not use them.
@@ -97,6 +100,66 @@ def getTiltSeriesPointer(micrographs):
     """ Pointer to the SetOfTiltSeries the micrographs were unstacked from, or None. """
     pointer = getattr(micrographs, TILT_SERIES_FIELD, None)
     return pointer if pointer is not None and pointer.hasValue() else None
+
+
+def ctfFromTiltCtf(tiltCtf):
+    """ A single-particle ``CTFModel`` with the values of a tilt image's ``CTFTomo``.
+
+    Defocus U/V/angle (standardized, as SPA programs expect), phase shift, PSD file,
+    resolution and fit quality are copied. The defocus is the one estimated for the
+    whole tilt image: the defocus gradient across a tilted image is not modelled.
+    Returns None if the tilt image has no defocus estimate.
+    """
+    defocusU, defocusV, defocusAngle = (tiltCtf.getDefocusU(), tiltCtf.getDefocusV(),
+                                        tiltCtf.getDefocusAngle())
+    if defocusU is None or defocusV is None or defocusAngle is None:
+        return None
+    ctf = emobj.CTFModel()
+    ctf.setStandardDefocus(defocusU, defocusV, defocusAngle)
+    if tiltCtf.hasPhaseShift():
+        ctf.setPhaseShift(tiltCtf.getPhaseShift())
+    if tiltCtf.getPsdFile():
+        ctf.setPsdFile(tiltCtf.getPsdFile())
+    if tiltCtf.getResolution() is not None:
+        ctf.setResolution(tiltCtf.getResolution())
+    if tiltCtf.getFitQuality() is not None:
+        ctf.setFitQuality(tiltCtf.getFitQuality())
+    return ctf
+
+
+class TiltCtfLookup:
+    """ The CTF of each tilt image, from a ``SetOfCTFTomoSeries``.
+
+    A tilt image is matched to its CTF by acquisition order or, for CTF series that do
+    not record it, by index, as ``CTFTomoSeries.getCtfTomoFromTi`` does. Disabled CTFs
+    and CTFs without a defocus estimate are left out.
+    """
+
+    def __init__(self, ctfSeriesSet):
+        self._series = {}  # tsId -> (key field, {key value: CTFModel})
+        for series in ctfSeriesSet.iterItems():
+            tsId = series.getTsId()  # Read first: iterated items are reused objects
+            byAcqOrder, byIndex = {}, {}
+            for tiltCtf in series.iterItems():
+                ctf = ctfFromTiltCtf(tiltCtf) if tiltCtf.isEnabled() else None
+                acqOrder, index = tiltCtf.getAcquisitionOrder(), tiltCtf.getIndex()
+                if acqOrder is not None:
+                    byAcqOrder[acqOrder] = ctf
+                if index is not None:
+                    byIndex[index] = ctf
+            self._series[tsId] = ((ACQ_ORDER_FIELD, byAcqOrder) if byAcqOrder
+                                  else (TILT_INDEX_FIELD, byIndex))
+
+    def getTsIds(self):
+        return set(self._series)
+
+    def get(self, tiltImage):
+        """ A new CTFModel for the tilt image, or None if it has no (enabled) CTF. """
+        field, ctfs = self._series.get(tiltImage.getTsId(), (None, {}))
+        key = (tiltImage.getAcquisitionOrder() if field == ACQ_ORDER_FIELD
+               else tiltImage.getIndex())
+        ctf = ctfs.get(key)
+        return None if ctf is None else ctf.clone()
 
 
 class TiltSeriesMicrograph(emobj.Micrograph):

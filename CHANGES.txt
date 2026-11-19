@@ -3,5 +3,6 @@
     - Protocol "unstack tilt-series": SetOfTiltSeries -> SetOfMicrographs (one micrograph per tilt image) for SPA pickers.
       The output is a plain SetOfMicrographs of Micrograph items, which Xmipp's picker and viewer require; the tilt
       identity is kept in extra attributes. Outputs of the former SetOfTiltSeriesMicrographs class still load.
+      Optionally takes a SetOfCTFTomoSeries and also outputs the CTF of each micrograph as a SetOfCTF.
     - Viewer "analyze results" for localize: per-tilt sigma, residuals and detection vs tilt angle (box/interval), scores, positions, per tilt-series summary.
     - Protocol "localize": 2D picks -> SetOfTiltSeriesCoordinates, SetOfLandmarkModels (pick chains) and, optionally, SetOfCoordinates3D.

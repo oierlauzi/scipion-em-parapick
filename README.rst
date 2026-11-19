@@ -14,6 +14,10 @@ Workflow
    index), optionally binned. It is a plain ``SetOfMicrographs``, so any SPA picker and
    viewer accepts it (Xmipp's accept no other class), and each micrograph remembers its
    tilt-series, stack index, acquisition order and tilt angle in extra attributes.
+   Given the CTF estimated on the tilt-series (``SetOfCTFTomoSeries``, optional), it also
+   outputs the CTF of each micrograph as a ``SetOfCTF``, for pickers and other
+   single-particle programs that use it. Each micrograph keeps the defocus estimated for
+   its whole tilt image; the defocus gradient across a tilted image is not modelled.
 2. Pick the micrographs with any SPA picker (Topaz, crYOLO, Xmipp, Gautomatch, ...).
 3. **parapick - localize**: picks (``SetOfCoordinates``) + ``SetOfTiltSeries`` (optional,
    taken from the micrographs by default) + ``SetOfTomograms`` (optional) →

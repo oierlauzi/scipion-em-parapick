@@ -33,19 +33,21 @@ import pwem.objects as emobj
 import pyworkflow.protocol.params as params
 from pwem.protocols import EMProtocol
 from pyworkflow import BETA
+from pyworkflow.object import Pointer
 from pyworkflow.protocol.constants import STEPS_PARALLEL
 from pyworkflow.utils import redStr
-from tomo.objects import SetOfTiltSeries
+from tomo.objects import SetOfCTFTomoSeries, SetOfTiltSeries
 
 from ..convert.images import binImage, readSection, writeMrc
 from ..convert.naming import batches, getTiltId
-from ..objects import TS_ID_FIELD, setTiltImageInfo, setTiltSeriesPointer
+from ..objects import TS_ID_FIELD, TiltCtfLookup, setTiltImageInfo, setTiltSeriesPointer
 
 logger = logging.getLogger(__name__)
 
 
 class ParapickUnstackOutputs(Enum):
     micrographs = emobj.SetOfMicrographs
+    ctfs = emobj.SetOfCTF
 
 
 class ParapickProtUnstack(EMProtocol):
@@ -57,6 +59,10 @@ class ParapickProtUnstack(EMProtocol):
     records its source tilt-series and tilt image. Disabled (excluded) tilt images are
     skipped. The output is a plain set of micrographs, so any single-particle picker or
     viewer accepts it.
+
+    Given the CTF estimated on the tilt-series, the protocol also outputs the CTF of each
+    micrograph as a regular set of CTFs, for pickers and other single-particle programs
+    that use it.
     """
     _label = 'unstack tilt-series'
     _devStatus = BETA
@@ -73,6 +79,15 @@ class ParapickProtUnstack(EMProtocol):
                       label='Tilt-series',
                       help='Tilt-series to unstack. Their alignment (if any) is kept as '
                            'metadata, the images are not interpolated.')
+        form.addParam('inputCtfs', params.PointerParam,
+                      pointerClass=SetOfCTFTomoSeries, allowsNull=True,
+                      label='CTF (optional)',
+                      help='CTF estimated on the tilt-series. If given, the CTF of each '
+                           'micrograph is also output as a single-particle set of CTFs. '
+                           'Each tilt image keeps the defocus estimated for the whole '
+                           'image: the defocus gradient across a tilted image is not '
+                           'modelled. Micrographs whose tilt image has no (enabled) CTF '
+                           'get none.')
         form.addParam('maxTiltAngle', params.FloatParam, default=-1,
                       label='Maximum tilt angle (deg)',
                       help='Only unstack tilt images with |tilt angle| <= this value. '
@@ -129,6 +144,14 @@ class ParapickProtUnstack(EMProtocol):
         outSet.setAcquisition(self._getAcquisition(inSet))
         setTiltSeriesPointer(outSet, self.inputTiltSeries)
 
+        ctfLookup = ctfSet = None
+        if self.inputCtfs.get() is not None:
+            ctfLookup = TiltCtfLookup(self.inputCtfs.get())
+            ctfSet = emobj.SetOfCTF.create(self._getPath())
+            # Pointer to this protocol's output, defined below
+            ctfSet.setMicrographs(Pointer(self, extended=ParapickUnstackOutputs.micrographs.name))
+        missingCtfs = 0
+
         for ts in inSet.iterItems(orderBy='_tsId'):
             tsId = ts.getTsId()
             indices = set(written.get(tsId, []))
@@ -140,11 +163,30 @@ class ParapickProtUnstack(EMProtocol):
                 mic.setMicName(tiltId)
                 setTiltImageInfo(mic, ti)
                 outSet.append(mic)
+                if ctfLookup is not None:
+                    ctf = ctfLookup.get(ti)
+                    if ctf is None:
+                        missingCtfs += 1
+                        continue
+                    ctf.setObjId(mic.getObjId())  # A CTF takes the id of its micrograph
+                    ctf.setMicrograph(mic)
+                    ctfSet.append(ctf)
 
         if not outSet.getSize():
             raise RuntimeError('No micrograph could be extracted. Check the log for errors.')
         self._defineOutputs(**{ParapickUnstackOutputs.micrographs.name: outSet})
         self._defineSourceRelation(self.inputTiltSeries, outSet)
+
+        if ctfSet is not None:
+            if missingCtfs:
+                logger.warning('%d of %d micrographs have no CTF: their tilt images have no '
+                               '(enabled) CTF estimate.' % (missingCtfs, outSet.getSize()))
+            if not ctfSet.getSize():
+                raise RuntimeError('None of the micrographs has a CTF. Check that the CTF '
+                                   'was estimated on these tilt-series.')
+            self._defineOutputs(**{ParapickUnstackOutputs.ctfs.name: ctfSet})
+            self._defineSourceRelation(self.inputCtfs, ctfSet)
+            self._defineCtfRelation(outSet, ctfSet)
 
     # --------------------------- UTILS functions ----------------------------
     def _unstackTiltSeries(self, tsId):
@@ -194,6 +236,11 @@ class ParapickProtUnstack(EMProtocol):
         inSet = self.inputTiltSeries.get()
         if inSet is not None and inSet.getDim() is None:
             errors.append('The dimensions of the input tilt-series are unknown.')
+        ctfs = self.inputCtfs.get()
+        if inSet is not None and ctfs is not None and \
+                not set(ctfs.getTSIds()) & set(inSet.getTSIds()):
+            errors.append('The CTF was not estimated on any of the input tilt-series '
+                          '(no tilt-series id in common).')
         return errors
 
     def _summary(self):
@@ -205,6 +252,9 @@ class ParapickProtUnstack(EMProtocol):
             summary.append('%d micrographs from %d tilt-series, %.3f Å/px.'
                            % (out.getSize(), len(out.getUniqueValues(TS_ID_FIELD)),
                               out.getSamplingRate()))
+            ctfs = getattr(self, ParapickUnstackOutputs.ctfs.name, None)
+            if ctfs is not None:
+                summary.append('CTF of %d micrographs.' % ctfs.getSize())
         return summary
 
     def _methods(self):
