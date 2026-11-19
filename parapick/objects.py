@@ -25,10 +25,19 @@
 # **************************************************************************
 """Micrographs that remember the tilt image they come from.
 
-A :class:`SetOfTiltSeriesMicrographs` is a regular ``SetOfMicrographs``, so it can
-be fed to any single-particle picker. Each item records the tilt-series id, the stack
-index, the acquisition order and the tilt angle of its source tilt image, and the
-set points to the source ``SetOfTiltSeries``.
+The micrographs unstacked from tilt-series are a plain ``SetOfMicrographs`` of plain
+``Micrograph`` items, so that any single-particle picker and viewer accepts them: some
+check the class names (the Xmipp picker and viewer only accept items of class
+``Micrograph`` in a ``SetOfMicrographs``). What ParaPick needs is stored as extra
+attributes, which Scipion saves and loads like any other:
+
+* on each micrograph, the tilt-series id, the stack index, the acquisition order and the
+  tilt angle of its source tilt image (:func:`setTiltImageInfo`);
+* on the set, a pointer to the source ``SetOfTiltSeries`` (:func:`setTiltSeriesPointer`).
+
+:class:`TiltSeriesMicrograph` and :class:`SetOfTiltSeriesMicrographs` carry the same
+attributes under the same names. They are kept only so that projects made by earlier
+versions still load. New outputs do not use them.
 """
 
 import pwem.objects as emobj
@@ -38,10 +47,63 @@ TS_ID_FIELD = '_tsId'          # Same name as TiltImage, for compatibility
 ACQ_ORDER_FIELD = '_acqOrder'  # Same name as TiltImage, for compatibility
 TILT_INDEX_FIELD = '_tiltIndex'
 TILT_ANGLE_FIELD = '_tiltAngle'
+TILT_SERIES_FIELD = '_tiltSeriesPointer'
+
+
+def _getValue(obj, field):
+    attr = getattr(obj, field, None)
+    return None if attr is None else attr.get()
+
+
+def setTiltImageInfo(micrograph, tiltImage):
+    """ Record on a micrograph the identity of the tilt image it comes from. """
+    setattr(micrograph, TS_ID_FIELD, String(tiltImage.getTsId()))
+    setattr(micrograph, TILT_INDEX_FIELD, Integer(tiltImage.getIndex()))
+    setattr(micrograph, ACQ_ORDER_FIELD, Integer(tiltImage.getAcquisitionOrder()))
+    setattr(micrograph, TILT_ANGLE_FIELD, Float(tiltImage.getTiltAngle()))
+
+
+def getTsId(micrograph):
+    """ Tilt-series id of the source tilt image, or None if not recorded. """
+    return _getValue(micrograph, TS_ID_FIELD)
+
+
+def getTiltIndex(micrograph):
+    """ 1-based index of the source tilt image in its stack (``TiltImage.getIndex``), as
+    used by landmark models, or None if not recorded. """
+    return _getValue(micrograph, TILT_INDEX_FIELD)
+
+
+def getAcquisitionOrder(micrograph):
+    return _getValue(micrograph, ACQ_ORDER_FIELD)
+
+
+def getTiltAngle(micrograph):
+    return _getValue(micrograph, TILT_ANGLE_FIELD)
+
+
+def setTiltSeriesPointer(micrographs, tiltSeries):
+    """ Record on a set of micrographs the SetOfTiltSeries (or a pointer to it) that they
+    were unstacked from. """
+    pointer = Pointer()
+    if tiltSeries.isPointer():
+        pointer.copy(tiltSeries, copyId=False)
+    else:
+        pointer.set(tiltSeries)
+    setattr(micrographs, TILT_SERIES_FIELD, pointer)
+
+
+def getTiltSeriesPointer(micrographs):
+    """ Pointer to the SetOfTiltSeries the micrographs were unstacked from, or None. """
+    pointer = getattr(micrographs, TILT_SERIES_FIELD, None)
+    return pointer if pointer is not None and pointer.hasValue() else None
 
 
 class TiltSeriesMicrograph(emobj.Micrograph):
-    """ A micrograph extracted from a tilt image of a tilt-series. """
+    """ A micrograph extracted from a tilt image of a tilt-series.
+
+    Deprecated: only for projects made by earlier versions (see the module docstring).
+    """
 
     def __init__(self, location=None, **kwargs):
         super().__init__(location, **kwargs)
@@ -85,7 +147,10 @@ class TiltSeriesMicrograph(emobj.Micrograph):
 
 
 class SetOfTiltSeriesMicrographs(emobj.SetOfMicrographs):
-    """ Micrographs extracted from the tilt images of a set of tilt-series. """
+    """ Micrographs extracted from the tilt images of a set of tilt-series.
+
+    Deprecated: only for projects made by earlier versions (see the module docstring).
+    """
     ITEM_TYPE = TiltSeriesMicrograph
 
     def __init__(self, **kwargs):

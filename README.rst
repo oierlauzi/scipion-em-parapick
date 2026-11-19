@@ -9,11 +9,11 @@ tomogram. Any single-particle picker can be used for the 2D picking.
 Workflow
 --------
 
-1. **parapick - unstack tilt-series**: ``SetOfTiltSeries`` → ``SetOfTiltSeriesMicrographs``.
+1. **parapick - unstack tilt-series**: ``SetOfTiltSeries`` → ``SetOfMicrographs``.
    Every enabled tilt image becomes a micrograph named ``<tsId>_<index>`` (1-based stack
-   index), optionally binned. It is a regular ``SetOfMicrographs``, so any SPA picker
-   accepts it, and each micrograph remembers its tilt-series, stack index, acquisition
-   order and tilt angle.
+   index), optionally binned. It is a plain ``SetOfMicrographs``, so any SPA picker and
+   viewer accepts it (Xmipp's accept no other class), and each micrograph remembers its
+   tilt-series, stack index, acquisition order and tilt angle in extra attributes.
 2. Pick the micrographs with any SPA picker (Topaz, crYOLO, Xmipp, Gautomatch, ...).
 3. **parapick - localize**: picks (``SetOfCoordinates``) + ``SetOfTiltSeries`` (optional,
    taken from the micrographs by default) + ``SetOfTomograms`` (optional) →

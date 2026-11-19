@@ -46,8 +46,7 @@ from tomo.protocols import ProtTomoBase
 from .. import Plugin
 from ..convert import geometry, star
 from ..convert.naming import batches, getTiltId, parseTiltId
-from ..objects import (ACQ_ORDER_FIELD, TILT_INDEX_FIELD, TS_ID_FIELD,
-                       SetOfTiltSeriesMicrographs)
+from ..objects import ACQ_ORDER_FIELD, TILT_INDEX_FIELD, TS_ID_FIELD, getTiltSeriesPointer
 
 logger = logging.getLogger(__name__)
 
@@ -336,10 +335,9 @@ class ParapickProtLocalize(EMProtocol, ProtTomoBase):
     def _getTiltSeriesPointer(self):
         if self.inputTiltSeries.get() is not None:
             return self.inputTiltSeries
-        mics = self._getMicrographs()
-        if isinstance(mics, SetOfTiltSeriesMicrographs):
-            return mics.getTiltSeries(asPointer=True)
-        return None
+        # Recorded by "unstack tilt-series" (also by the SetOfTiltSeriesMicrographs of
+        # earlier versions, under the same attribute)
+        return getTiltSeriesPointer(self._getMicrographs())
 
     def _getTiltSeriesSet(self):
         pointer = self._getTiltSeriesPointer()

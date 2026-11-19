@@ -39,13 +39,13 @@ from tomo.objects import SetOfTiltSeries
 
 from ..convert.images import binImage, readSection, writeMrc
 from ..convert.naming import batches, getTiltId
-from ..objects import SetOfTiltSeriesMicrographs, TiltSeriesMicrograph
+from ..objects import TS_ID_FIELD, setTiltImageInfo, setTiltSeriesPointer
 
 logger = logging.getLogger(__name__)
 
 
 class ParapickUnstackOutputs(Enum):
-    micrographs = SetOfTiltSeriesMicrographs
+    micrographs = emobj.SetOfMicrographs
 
 
 class ParapickProtUnstack(EMProtocol):
@@ -55,7 +55,8 @@ class ParapickProtUnstack(EMProtocol):
 
     The micrographs keep the raw (non-aligned) frame of the tilt images, and each one
     records its source tilt-series and tilt image. Disabled (excluded) tilt images are
-    skipped.
+    skipped. The output is a plain set of micrographs, so any single-particle picker or
+    viewer accepts it.
     """
     _label = 'unstack tilt-series'
     _devStatus = BETA
@@ -120,10 +121,13 @@ class ParapickProtUnstack(EMProtocol):
                 with open(self._getExtraPath(fn)) as f:
                     written.update(json.load(f))
 
-        outSet = SetOfTiltSeriesMicrographs.create(self._getPath())
+        # A plain SetOfMicrographs of plain Micrographs: pickers and viewers such as
+        # Xmipp's only accept these class names. The tilt identity goes in extra
+        # attributes (see ..objects).
+        outSet = emobj.SetOfMicrographs.create(self._getPath())
         outSet.setSamplingRate(self._getOutputSamplingRate())
         outSet.setAcquisition(self._getAcquisition(inSet))
-        outSet.setTiltSeries(self.inputTiltSeries)
+        setTiltSeriesPointer(outSet, self.inputTiltSeries)
 
         for ts in inSet.iterItems(orderBy='_tsId'):
             tsId = ts.getTsId()
@@ -132,10 +136,9 @@ class ParapickProtUnstack(EMProtocol):
                 if ti.getIndex() not in indices:
                     continue
                 tiltId = getTiltId(tsId, ti.getIndex())
-                mic = TiltSeriesMicrograph(location=self._getMicrographFn(tiltId))
+                mic = emobj.Micrograph(location=self._getMicrographFn(tiltId))
                 mic.setMicName(tiltId)
-                mic.copyFromTiltImage(ti)
-                mic.setTsId(tsId)
+                setTiltImageInfo(mic, ti)
                 outSet.append(mic)
 
         if not outSet.getSize():
@@ -200,7 +203,8 @@ class ParapickProtUnstack(EMProtocol):
             summary.append('Output not ready yet.')
         else:
             summary.append('%d micrographs from %d tilt-series, %.3f Å/px.'
-                           % (out.getSize(), len(out.getTSIds()), out.getSamplingRate()))
+                           % (out.getSize(), len(out.getUniqueValues(TS_ID_FIELD)),
+                              out.getSamplingRate()))
         return summary
 
     def _methods(self):

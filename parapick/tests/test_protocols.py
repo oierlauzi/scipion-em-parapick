@@ -47,6 +47,7 @@ from tomo.protocols import ProtImportTomograms, ProtImportTs
 
 from parapick.convert.geometry import projectScipion
 from parapick.convert.naming import getTiltId
+from parapick.objects import getTiltIndex, getTiltSeriesPointer, getTsId
 from parapick.protocols import (ParapickLocalizeOutputs, ParapickProtLocalize,
                                 ParapickProtUnstack, ParapickUnstackOutputs)
 
@@ -125,7 +126,7 @@ class TestParapickWorkflow(BaseTest):
         os.makedirs(boxDir)
         micW, micH = mics.getDim()[:2]
         for mic in mics:
-            picks = self._projections(mic.getTsId(), mic.getTiltIndex()) / BINNING
+            picks = self._projections(getTsId(mic), getTiltIndex(mic)) / BINNING
             picks = picks[self.rng.random(len(picks)) < RECALL]
             false = self.rng.uniform((0, 0), (micW, micH), size=(FALSE_PICKS, 2))
             with open(os.path.join(boxDir, mic.getMicName() + '.box'), 'w') as f:
@@ -175,8 +176,11 @@ class TestParapickWorkflow(BaseTest):
         self.assertAlmostEqual(mics.getSamplingRate(), TS_SAMPLING * BINNING)
         self.assertEqual(tuple(mics.getDim()[:2]), (WIDTH // BINNING, HEIGHT // BINNING))
         mic = mics.getFirstItem()
-        self.assertEqual(mic.getMicName(), getTiltId(mic.getTsId(), mic.getTiltIndex()))
-        self.assertEqual(mics.getTiltSeries().getSize(), len(TS_IDS))
+        # Plain class names: Xmipp's picker and viewer accept nothing else
+        self.assertEqual(mics.getClassName(), 'SetOfMicrographs')
+        self.assertEqual(mic.getClassName(), 'Micrograph')
+        self.assertEqual(mic.getMicName(), getTiltId(getTsId(mic), getTiltIndex(mic)))
+        self.assertEqual(getTiltSeriesPointer(mics).get().getSize(), len(TS_IDS))
 
         # "Pick"
         protPicks = self.newProtocol(ProtImportCoordinates,
