@@ -96,6 +96,8 @@ class Plugin(pwem.Plugin):
             return '-e ' + shlex.quote(os.path.abspath(source) + suffix)
         return shlex.quote(source + suffix)
 
+    # pip runs with PYTHONNOUSERSITE=1, as Scipion runs the programs: otherwise a package in
+    # ~/.local would count as installed although ParaPick cannot import it under Scipion.
     @classmethod
     def _addParapickPackage(cls, env, version, default=False):
         envName = getEnvName(version)
@@ -104,7 +106,7 @@ class Plugin(pwem.Plugin):
             cls.getCondaActivationCmd(),
             'conda create -y -n %s python=%s &&' % (envName, PYTHON_VERSION),
             'conda activate %s &&' % envName,
-            'python -m pip install %s &&' % cls._getRequirement(version),
+            'PYTHONNOUSERSITE=1 python -m pip install %s &&' % cls._getRequirement(version),
             'parapick --version &&',
             'touch %s' % installed,
         ])
@@ -124,7 +126,7 @@ class Plugin(pwem.Plugin):
         cmd = ' '.join([
             cls.getCondaActivationCmd(),
             'conda activate %s &&' % getEnvName(version),
-            'python -m pip install %s &&' % cls._getRequirement(version, [LEOPARD_EXTRA]),
+            'PYTHONNOUSERSITE=1 python -m pip install %s &&' % cls._getRequirement(version, [LEOPARD_EXTRA]),
             'parapick match-template --help > /dev/null &&',
             'touch %s' % installed,
         ])
