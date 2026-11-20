@@ -5,6 +5,7 @@
       with the parameters of each tilt derived from its dose and geometry. Needs the optional binary parapick-leopard.
       Leopard-EM (Giammar et al., 2026, Acta Cryst. D) is cited in the protocol's references and methods.
       Options "Binning factor" and "Sampling" (default/fast) for faster searches.
+      Options "Peak score" (zscore/mip) and "Peaks per tilt image"; changing them and continuing only picks again.
     - Protocol "unstack tilt-series": SetOfTiltSeries -> SetOfMicrographs (one micrograph per tilt image) for SPA pickers.
       The output is a plain SetOfMicrographs of Micrograph items, which Xmipp's picker and viewer require; the tilt
       identity is kept in extra attributes. Outputs of the former SetOfTiltSeriesMicrographs class still load.

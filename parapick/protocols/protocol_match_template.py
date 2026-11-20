@@ -50,6 +50,7 @@ logger = logging.getLogger(__name__)
 
 PIXEL_SIZE_TOLERANCE = 0.01
 SAMPLING_CHOICES = ['default', 'fast']
+SCORE_CHOICES = ['zscore', 'mip']
 
 
 class ParapickMatchTemplateOutputs(Enum):
@@ -153,6 +154,21 @@ class ParapickProtMatchTemplate(EMProtocol):
                       help='Expected false positives per tilt image: sets the threshold of '
                            'the peaks. Localize tolerates false positives on single tilts, so '
                            'a value well above 1 keeps more true particles.')
+        form.addParam('score', params.EnumParam, choices=SCORE_CHOICES, default=0,
+                      label='Peak score',
+                      help='zscore: Leopard-EM\'s z-score (best correlation normalised over '
+                           'the orientations at each pixel), thresholded for the false '
+                           'positives per image. mip: the best correlation normalised over the '
+                           'image, which keeps the signal of particles that correlate at every '
+                           'orientation, as on low-dose binned tilt images; needs "Peaks per '
+                           'tilt image". Changing the picking and continuing only picks the '
+                           'peaks again from the results.')
+        form.addParam('peaksPerTilt', params.IntParam, default=-1,
+                      label='Peaks per tilt image',
+                      help='Keep the N best peaks of each tilt image instead of thresholding '
+                           'them (a few times the particles expected per image; localize '
+                           'tolerates false positives). Negative: threshold for the false '
+                           'positives per image (zscore only).')
         form.addParam('orientationBatchSize', params.IntParam, default=16,
                       expertLevel=params.LEVEL_ADVANCED,
                       label='Orientation batch size',
@@ -177,7 +193,8 @@ class ParapickProtMatchTemplate(EMProtocol):
     def _insertAllSteps(self):
         convertId = self._insertFunctionStep(self.convertInputStep, needsGPU=False)
         tsIds = sorted(self._getSearchedTsIds())
-        runIds = [self._insertFunctionStep(self.matchStep, i, batch,
+        # The picking is part of the arguments: changing it and continuing picks again
+        runIds = [self._insertFunctionStep(self.matchStep, i, batch, self._getPicking(),
                                            prerequisites=[convertId], needsGPU=True)
                   for i, batch in enumerate(batches(tsIds, self.batchSize.get()))]
         self._insertFunctionStep(self.createOutputStep, prerequisites=runIds, needsGPU=False)
@@ -216,7 +233,7 @@ class ParapickProtMatchTemplate(EMProtocol):
         with open(self._getInputPath(self.MANIFEST), 'w') as f:
             json.dump({'tilts': manifest, 'dosePerTilt': dose if dose else None}, f)
 
-    def matchStep(self, batchIndex, tsIds):
+    def matchStep(self, batchIndex, tsIds, picking=None):
         Plugin.runParapick(self, self._getMatchArgs(self._getBatchPath(batchIndex), tsIds))
 
     def createOutputStep(self):
@@ -330,7 +347,10 @@ class ParapickProtMatchTemplate(EMProtocol):
                 '--false-positives', self.falsePositives.get(),
                 '--orientation-batch-size', self.orientationBatchSize.get(),
                 '--binning', self.binning.get(),
-                '--sampling', SAMPLING_CHOICES[self.sampling.get()]]
+                '--sampling', SAMPLING_CHOICES[self.sampling.get()],
+                '--score', SCORE_CHOICES[self.score.get()]]
+        if self.peaksPerTilt.get() > 0:
+            args += ['--peaks-per-tilt', self.peaksPerTilt.get()]
         if manifest.get('dosePerTilt'):
             args += ['--dose-per-tilt', manifest['dosePerTilt']]
         if self.maxTilts.get() > 0:
@@ -338,6 +358,11 @@ class ParapickProtMatchTemplate(EMProtocol):
         if not self.energyFilter.get():
             args += ['--no-energy-filter']
         return ' '.join(str(a) for a in args) + ' ' + self.extraParams.get('')
+
+    def _getPicking(self):
+        return {'score': SCORE_CHOICES[self.score.get()],
+                'peaksPerTilt': self.peaksPerTilt.get(),
+                'falsePositives': self.falsePositives.get()}
 
     def _readManifest(self):
         with open(self._getInputPath(self.MANIFEST)) as f:
@@ -392,6 +417,8 @@ class ParapickProtMatchTemplate(EMProtocol):
             errors.append('Leopard-EM is not installed for ParaPick. Install it with: '
                           'scipion3 installb %s-%s'
                           % (PARAPICK_LEOPARD, Plugin.getActiveVersion() or DEFAULT_VERSION))
+        if SCORE_CHOICES[self.score.get()] == 'mip' and self.peaksPerTilt.get() <= 0:
+            errors.append('The mip score needs "Peaks per tilt image".')
         diameter = self.particleDiameter.get()
         if diameter is None or diameter <= 0:
             errors.append('Please, provide the particle diameter.')
