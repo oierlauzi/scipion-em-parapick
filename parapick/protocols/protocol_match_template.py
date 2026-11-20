@@ -169,12 +169,17 @@ class ParapickProtMatchTemplate(EMProtocol):
                            'them (a few times the particles expected per image; localize '
                            'tolerates false positives). Negative: threshold for the false '
                            'positives per image (zscore only).')
-        form.addParam('orientationBatchSize', params.IntParam, default=16,
+        form.addParam('orientationBatchSize', params.IntParam, default=-1,
                       expertLevel=params.LEVEL_ADVANCED,
                       label='Orientation batch size',
+                      help='Orientations correlated at once. Negative: automatic, about 4 GB '
+                           'of GPU memory per search. Lower it if the GPU runs out of memory.')
+        form.addParam('concurrentSearches', params.IntParam, default=3,
+                      expertLevel=params.LEVEL_ADVANCED,
+                      label='Concurrent searches',
                       validators=[params.GE(1)],
-                      help='Orientations correlated at once. Lower it if the GPU runs out '
-                           'of memory.')
+                      help='Tilt images searched at once on the GPU, each in its own process: '
+                           'Leopard-EM\'s start-up of each search overlaps with the others.')
         form.addHidden(params.GPU_LIST, params.StringParam, default='0',
                        label='GPU IDs')
         form.addParam('batchSize', params.IntParam, default=1,
@@ -347,10 +352,12 @@ class ParapickProtMatchTemplate(EMProtocol):
                 '--particle-diameter', self.particleDiameter.get(),
                 '--symmetry', self.symmetry.get(),
                 '--false-positives', self.falsePositives.get(),
-                '--orientation-batch-size', self.orientationBatchSize.get(),
+                '--concurrent-searches', self.concurrentSearches.get(),
                 '--binning', self.binning.get(),
                 '--sampling', SAMPLING_CHOICES[self.sampling.get()],
                 '--score', SCORE_CHOICES[self.score.get()]]
+        if self.orientationBatchSize.get() > 0:
+            args += ['--orientation-batch-size', self.orientationBatchSize.get()]
         if self.peaksPerTilt.get() > 0:
             args += ['--peaks-per-tilt', self.peaksPerTilt.get()]
         if manifest.get('dosePerTilt'):
