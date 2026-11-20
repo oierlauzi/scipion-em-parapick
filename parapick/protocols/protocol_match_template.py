@@ -193,11 +193,13 @@ class ParapickProtMatchTemplate(EMProtocol):
     def _insertAllSteps(self):
         convertId = self._insertFunctionStep(self.convertInputStep, needsGPU=False)
         tsIds = sorted(self._getSearchedTsIds())
-        # The picking is part of the arguments: changing it and continuing picks again
+        # The picking is part of the arguments of the search and output steps: changing it and
+        # continuing picks again from the results and remakes the outputs
         runIds = [self._insertFunctionStep(self.matchStep, i, batch, self._getPicking(),
                                            prerequisites=[convertId], needsGPU=True)
                   for i, batch in enumerate(batches(tsIds, self.batchSize.get()))]
-        self._insertFunctionStep(self.createOutputStep, prerequisites=runIds, needsGPU=False)
+        self._insertFunctionStep(self.createOutputStep, self._getPicking(),
+                                 prerequisites=runIds, needsGPU=False)
 
     # --------------------------- STEPS functions ----------------------------
     def convertInputStep(self):
@@ -236,7 +238,7 @@ class ParapickProtMatchTemplate(EMProtocol):
     def matchStep(self, batchIndex, tsIds, picking=None):
         Plugin.runParapick(self, self._getMatchArgs(self._getBatchPath(batchIndex), tsIds))
 
-    def createOutputStep(self):
+    def createOutputStep(self, picking=None):
         manifest = self._readManifest()['tilts']
         inSet = self.inputTiltSeries.get()
         sr = inSet.getSamplingRate()
